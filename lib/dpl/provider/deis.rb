@@ -4,7 +4,18 @@ module DPL
       
       def install_deploy_dependencies
         install_url = determine_install_url
-        context.shell "curl -sSL #{install_url} | bash -x -s #{option(:cli_version)}"
+        tries ||= 0
+        unless context.shell "curl -sSL #{install_url} | bash -x -s #{option(:cli_version)}"
+          error 'Deis install failed.'
+        end
+      rescue
+        tries += 1
+        if tries <= 3
+          sleep 2 # Allow a few seconds for server to recover
+          retry
+        else
+          error "Deis install failed after #{tries} attempts."
+        end
       end
 
       #Default to installing the default v1 client. Otherwise determine if this is a v2 client
